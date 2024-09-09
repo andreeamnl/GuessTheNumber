@@ -71,6 +71,12 @@ And what if you need to update the game? Wouldn’t it be easier if you could fi
 
 ## Data Management
 
+### Caching and Queues
+
+**Service A** uses a cache system to quickly retrieve frequently accessed data, such as player statistics and room status, which speeds up responses and reduces database load. This improves performance and handles high traffic more efficiently, ensuring a smoother user experience.
+
+Additionally, queues help manage the flow of requests for room creation and matchmaking by temporarily storing them until they can be processed. This prevents overloading the system, improves scalability, and enhances responsiveness during peak demand (if there will ever be any for my poor app).
+
 ### Service A Endpoints
 
 - **POST /register**
