@@ -23,7 +23,7 @@ And what if you need to update the game? Wouldn’t it be easier if you could fi
 
    - Minecraft uses microservices to manage game worlds, player interactions, and server connections, making it easier to scale and maintain the game.
 
-3. **PUBG: Battlegrounds**
+3. **PUBG**
    - PUBG uses microservices to handle matchmaking, player data, and game sessions, which helps manage the high demands of its players and real-time gameplay.
 
 ## Service Boundaries
@@ -111,4 +111,16 @@ And what if you need to update the game? Wouldn’t it be easier if you could fi
 ### Deployment
 
 - **Containers**: Docker to containerize services.
-- **Orchestration**: Kubernetes for managing container services, ensuring load balancing, automatic scaling.
+- **Orchestration**: Kubernetes for managing container services, to ensure load balancing, automatic scaling.
+
+---
+
+## Resources
+
+1. [Monoliths vs. Microservices in Gaming Architecture](https://www.reddit.com/r/gamedev/comments/xdurgt/monoliths_vs_microservices_in_gaming_architecture/)
+2. [Building a Microservices Example Game with Distributed Messaging](https://blog.risingstack.com/building-a-microservices-example-game-with-distributed-messaging/)
+3. [Microservices Examples](https://blog.dreamfactory.com/microservices-examples)
+4. [Docker Curriculum](https://docker-curriculum.com/)
+5. [ELI5: What is Docker and How Do You Use It?](https://www.reddit.com/r/Frontend/comments/yvem0t/eli5_what_is_docker_and_how_do_you_use_it/)
+6. [Distributed Game Architectures](http://www.dbs.ifi.lmu.de/cms/VO_Managing_Massive_Multiplayer_Online_Games)  
+   [Chapter 3: Distributed Game Architectures (PDF)](https://www.dbs.ifi.lmu.de/Lehre/mmmo/sose17/slides/MMMO-3-Network.pdf)
