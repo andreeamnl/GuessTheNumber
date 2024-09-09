@@ -5,13 +5,13 @@
 
 ## Application Suitability Assessment
 
-The "Guess the Number" Multiplayer Tournament is a great fit for using microservices because:
+Why is the "Guess the Number" Multiplayer Tournament a good candidate for microservices?
 
-- **Complex Functionality**: The game includes several different parts, such as player login, matchmaking, game rules, and leaderboards. Each part does something unique and can be developed and managed on its own.
+Think about the different parts of the game — player login, matchmaking, game rules, leaderboards — all these things have unique functions. Doesn’t it make sense to manage each one separately? Microservices allow me to build and update them individually without involving the entire system.
 
-- **Scalability**: Different parts of the game will handle different amounts of work. For example, during busy times like tournaments, the parts that handle matchmaking and game rules will be in high demand. Microservices allow each part to grow or shrink as needed to manage this demand.
+What happens when a tournament gets busy? Not all parts of the game will experience the same traffic. Matchmaking and game rules might need to handle way more requests. Microservices let those parts scale up to meet demand while others stay steady.
 
-- **Modularity**: With microservices, you can update or change one part of the game (like the login system or game rules) without affecting the others. This makes it easier to fix problems and add new features quickly.
+And what if you need to update the game? Wouldn’t it be easier if you could fix one part, like the login system, without affecting everything else? Microservices make this possible, allowing you to fix bugs, add features smoothly, without downtime.
 
 ### Real-World Examples
 
