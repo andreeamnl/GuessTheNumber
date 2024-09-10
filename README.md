@@ -108,7 +108,7 @@ Queues handle requests for creating rooms and matchmaking, preventing system ove
       "type": "join",
       "payload": {
         "player_name": "Andreea",
-        "room": "Room1"
+        "room": "0000"
       }
     }
     ```
@@ -117,7 +117,7 @@ Queues handle requests for creating rooms and matchmaking, preventing system ove
     {
       "type": "join_ack",
       "payload": {
-        "message": "Welcome Andreea to Room1!",
+        "message": "Welcome Andreea to 0000",
         "players": ["Andreea"]
       }
     }
