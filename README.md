@@ -73,9 +73,9 @@ And what if you need to update the game? Wouldn’t it be easier if you could fi
 
 ### Caching and Queues
 
-**Service A** uses a cache system to quickly retrieve frequently accessed data, such as player statistics and room status, which speeds up responses and reduces database load. This improves performance and handles high traffic more efficiently, ensuring a smoother user experience.
+Both Service A and Service B share a cache to quickly access player stats and room info. This keeps data consistent and speeds up responses.
 
-Additionally, queues help manage the flow of requests for room creation and matchmaking by temporarily storing them until they can be processed. This prevents overloading the system, improves scalability, and enhances responsiveness during peak demand (if there will ever be any for my poor app).
+Queues handle requests for creating rooms and matchmaking, preventing system overload and making the app run smoothly.
 
 ### Service A Endpoints
 
@@ -100,24 +100,110 @@ Additionally, queues help manage the flow of requests for room creation and matc
 
 ### Service B Endpoints
 
-- **POST /start-game**
-  - **Request**: `{ "roomId": "string", "number": "integer" }`
-  - **Response**: `{ "message": "Game started", "status": "waiting for guesses" }`
-- **POST /submit-guess**
-  - **Request**: `{ "roomId": "string", "guess": "integer" }`
-  - **Response**: `{ "result": "string", "feedback": "string" }`
-- **GET /game/{roomId}/state**
-  - **Request**: `{ "roomId": "string" }`
-  - **Response**: `{ "status": "string", "currentTurn": "string", "guesserAttempts": "integer" }`
-- **GET /leaderboard**
-  - **Response**: `{ "topPlayers": [{ "playerId": "string", "points": "integer" }] }`
+- **join**: Player requests to join a game room.
+
+  - **Request**:
+    ```json
+    {
+      "type": "join",
+      "payload": {
+        "player_name": "Andreea",
+        "room": "Room1"
+      }
+    }
+    ```
+  - **Response** (join_ack):
+    ```json
+    {
+      "type": "join_ack",
+      "payload": {
+        "message": "Welcome Andreea to Room1!",
+        "players": ["Andreea"]
+      }
+    }
+    ```
+
+- **send_number**: One player submits the secret number for the game.
+
+  - **Request**:
+    ```json
+    {
+      "type": "send_number",
+      "payload": {
+        "player_name": "Andreea",
+        "room": "0000",
+        "number": 42
+      }
+    }
+    ```
+  - **Response**:
+    ```json
+    {
+      "type": "send_number_ack",
+      "payload": {
+        "message": "Number has been submitted."
+      }
+    }
+    ```
+
+- **guess_number**: Anoter player submits a guess.
+
+  - **Request**:
+    ```json
+    {
+      "type": "guess_number",
+      "payload": {
+        "player_name": "John",
+        "room": "0000",
+        "guess": 35
+      }
+    }
+    ```
+
+- **guess_response**: Server responds to the guess with feedback.
+
+  - **Response**:
+    ```json
+    {
+      "type": "guess_response",
+      "payload": {
+        "message": "Too low! Try again.",
+        "correct": false,
+        "hint": "higher"
+      }
+    }
+    ```
+
+- **disconnect**: Player disconnects from the room.
+
+  - **Request**:
+    ```json
+    {
+      "type": "disconnect",
+      "payload": {
+        "player_name": "Andreea",
+        "room": "0000"
+      }
+    }
+    ```
+
+- **notification**: Server sends a message to all players about game events.
+  - **Response**:
+    ```json
+    {
+      "type": "notification",
+      "payload": {
+        "message": "Andreea has guessed the correct number!"
+      }
+    }
+    ```
 
 ## Deployment and Scaling
 
 ### Deployment
 
 - **Containers**: Docker to containerize services.
-- **Orchestration**: Kubernetes for managing container services, to ensure load balancing, automatic scaling.
+- **Orchestration**: Docker Compose for managing container services, to ensure load balancing, automatic scaling.
 
 ---
 
