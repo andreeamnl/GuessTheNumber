@@ -16,7 +16,7 @@ def register_routes(app):
     def handle_timeout_error(e):
         return jsonify({"error": str(e)}), 503
 
-    @app.route('/game/status', methods=['GET'])
+    @app.route('/status', methods=['GET'])
     def status():
         return jsonify({
             "status": "Service is running",
@@ -24,7 +24,7 @@ def register_routes(app):
             "version": "1.0.0"
         }), 200
 
-    @app.route('/game/start-game/<user_id>', methods=['POST'])
+    @app.route('/start-game/<user_id>', methods=['POST'])
     def start_game(user_id):
         response = requests.get(f"{USER_SERVICE_URL}/api/users/{user_id}")  
         if response.status_code != 200:
@@ -59,7 +59,7 @@ def register_routes(app):
             }
         }), 200
 
-    @app.route('/game/guess/<game_id>', methods=['POST'])
+    @app.route('/guess/<game_id>', methods=['POST'])
     def make_guess(game_id):
         data = request.json
         user_id = data.get('user_id')  
@@ -90,7 +90,7 @@ def register_routes(app):
             db.session.commit()
             return jsonify({"message": "Correct! You've guessed the number!", "attempts": player_score.attempts}), 200
 
-    @app.route('/game/status/<game_id>', methods=['GET'])
+    @app.route('/status/<game_id>', methods=['GET'])
     def get_game_status(game_id):
         game = Game.query.get(game_id)
         if not game:

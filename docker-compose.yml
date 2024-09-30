@@ -29,3 +29,16 @@ services:
     image: redis:latest
     ports:
       - "6379:6379"
+
+  gateway:
+    build:
+      context: ./Gateway
+      dockerfile: Dockerfile
+    ports:
+      - "5004:5004"
+    depends_on:
+      - accounts_service
+      - game_service
+      - redis
+    environment:
+      - NODE_ENV=development
