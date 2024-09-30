@@ -77,124 +77,128 @@ Both Service A and Service B share a cache to quickly access player stats and ro
 
 Queues handle requests for creating rooms and matchmaking, preventing system overload and making the app run smoothly.
 
-### Service A Endpoints
+### Service A (Accounts) Endpoints
 
-- **POST /register**
-  - **Request**: `{ "username": "string", "password": "string" }`
-  - **Response**: `{ "message": "User registered successfully" }`
-- **POST /login**
-  - **Request**: `{ "username": "string", "password": "string" }`
-  - **Response**: `{ "token": "jwt-token" }`
-- **POST /logout**
-  - **Request**: `{ "token": "jwt-token" }`
-  - **Response**: `{ "message": "User logged out successfully" }`
-- **POST /matchmake**
-  - **Request**: `{ "token": "jwt-token" }`
-  - **Response**: `{ "roomId": "string", "role": "string" }`
-- **GET /room-status**
-  - **Request**: `{ "roomId": "string" }`
-  - **Response**: `{ "status": "string", "players": [{ "playerId": "string", "role": "string" }] }`
-- **POST /players/{playerId}/update-stats**
-  - **Request**: `{ "points": "integer" }`
-  - **Response**: `{ "message": "Player stats updated successfully" }`
-
-### Service B Endpoints
-
-- **join**: Player requests to join a game room.
-
+- **POST /accounts/api/users** (Register a user)
   - **Request**:
     ```json
     {
-      "type": "join",
-      "payload": {
-        "player_name": "Andreea",
-        "room": "0000"
-      }
-    }
-    ```
-  - **Response** (join_ack):
-    ```json
-    {
-      "type": "join_ack",
-      "payload": {
-        "message": "Welcome Andreea to 0000",
-        "players": ["Andreea"]
-      }
-    }
-    ```
-
-- **send_number**: One player submits the secret number for the game.
-
-  - **Request**:
-    ```json
-    {
-      "type": "send_number",
-      "payload": {
-        "player_name": "Andreea",
-        "room": "0000",
-        "number": 42
-      }
+      "name": "john_doe",
+      "password": "securepassword"
     }
     ```
   - **Response**:
     ```json
     {
-      "type": "send_number_ack",
-      "payload": {
-        "message": "Number has been submitted."
-      }
+      "message": "User registered successfully"
     }
     ```
 
-- **guess_number**: Anoter player submits a guess.
-
+- **POST /accounts/api/users/login** (Login a user)
   - **Request**:
     ```json
     {
-      "type": "guess_number",
-      "payload": {
-        "player_name": "John",
-        "room": "0000",
-        "guess": 35
-      }
+      "name": "john_doe",
+      "password": "securepassword"
     }
     ```
-
-- **guess_response**: Server responds to the guess with feedback.
-
   - **Response**:
     ```json
     {
-      "type": "guess_response",
-      "payload": {
-        "message": "Too low! Try again.",
-        "correct": false,
-        "hint": "higher"
-      }
+      "message": "Login successful",
+      "user_id": 1
     }
     ```
 
-- **disconnect**: Player disconnects from the room.
+- **GET /accounts/api/users/:user_id** (Get user info)
+  - **Response**:
+    ```json
+    {
+      "id": 1,
+      "name": "john_doe"
+    }
+    ```
 
+- **DELETE /accounts/api/users/:user_id** (Delete user)
+  - **Response**:
+    ```json
+    {
+      "message": "User deleted successfully"
+    }
+    ```
+
+- **GET /accounts/api/users** (Get all users)
+  - **Response**:
+    ```json
+    [
+      {
+        "id": 1,
+        "name": "john_doe"
+      }
+    ]
+    ```
+
+### Service B (Game Logic) Endpoints
+
+- **POST /game/start-game/:user_id** (Start a game)
   - **Request**:
     ```json
     {
-      "type": "disconnect",
-      "payload": {
-        "player_name": "Andreea",
-        "room": "0000"
+      "target_number": 42
+    }
+    ```
+  - **Response**:
+    ```json
+    {
+      "message": "Game started!",
+      "game_id": 123,
+      "player_scores": {
+        "1": {
+          "attempts": 0,
+          "target_number": 42
+        }
       }
     }
     ```
 
-- **notification**: Server sends a message to all players about game events.
+- **POST /game/guess/:game_id** (Make a guess in a game)
+  - **Request**:
+    ```json
+    {
+      "user_id": 1,
+      "guess": 35
+    }
+    ```
   - **Response**:
     ```json
     {
-      "type": "notification",
-      "payload": {
-        "message": "Andreea has guessed the correct number!"
+      "message": "Higher!",
+      "attempts": 1
+    }
+    ```
+
+- **GET /game/status/:game_id** (Get the status of the game)
+  - **Response**:
+    ```json
+    {
+      "game_id": 123,
+      "status": "in_progress",
+      "players_scores": {
+        "1": {
+          "attempts": 1,
+          "target_number": 42
+        }
       }
+    }
+    ```
+
+- **GET /game/status** (Health check)
+  - **Response**:
+    ```json
+    {
+      "status": "Service is running",
+      "service": "Guess The Number Game Service",
+      "version": "1.0.0"
     }
     ```
 
