@@ -1,19 +1,18 @@
 from flask import Flask
-from models.database import db  # Ensure database import here
+from models.database import db  
 from models.game import Game
-from server import register_routes  # Import the function to register routes
+from server import register_routes  
 
 def create_app():
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///game.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    db.init_app(app)  # Initialize db with the Flask app
+    db.init_app(app)  
     
     with app.app_context():
-        db.create_all()  # Create tables here if needed
+        db.create_all()  
 
-    register_routes(app)  # Register the routes
-
+    register_routes(app)  
     return app
 
 if __name__ == "__main__":
