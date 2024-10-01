@@ -3,7 +3,22 @@ const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
+app.use(express.json());
 const PORT = process.env.PORT || 5004;
+
+const rateLimit = require('express-rate-limit');
+
+
+
+const limiter = rateLimit({
+    windowMs: 5 * 1000, // 1 second
+    max: 2,
+    message: 'Too many requests!',
+});
+
+
+app.use(limiter);
+
 
 const redisClient = redis.createClient({
     url: 'redis://redis:6379',

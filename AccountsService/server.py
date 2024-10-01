@@ -7,7 +7,27 @@ import json
 
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0, decode_responses=True)
 
+import time
+
+REQUEST_TIMEOUT = 0.001
+
+
 def register_routes(app):
+    @app.before_request
+    def start_timer():
+        """Start the timer before each request."""
+        request.start_time = time.time()
+
+    @app.after_request
+    def check_timeout(response):
+        """Check if the request processing exceeded the timeout."""
+        elapsed_time = time.time() - request.start_time
+        if elapsed_time > REQUEST_TIMEOUT:
+            response.status_code = 408
+            response.data = json.dumps({"error": "Request timed out"})
+            response.headers['Content-Type'] = 'application/json'
+        return response
+    
     @app.route('/api/users', methods=['POST'])
     def register_user():
         try:

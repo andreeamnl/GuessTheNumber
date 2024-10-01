@@ -5,16 +5,31 @@ import requests
 from models.database import db  # Import your existing db
 from models.game import Game  # Import your updated models
 from models.playerscore import PlayerScore  # Import your updated models
+import json
 
 USER_SERVICE_URL = "http://accounts_service:5001"  # Updated to point to accounts_service
 
-class TimeoutException(Exception):
-    pass
+import time
+
+REQUEST_TIMEOUT = 0.0001
+
+
 
 def register_routes(app):
-    @app.errorhandler(TimeoutException)
-    def handle_timeout_error(e):
-        return jsonify({"error": str(e)}), 503
+    @app.before_request
+    def start_timer():
+        """Start the timer before each request."""
+        request.start_time = time.time()
+
+    @app.after_request
+    def check_timeout(response):
+        """Check if the request processing exceeded the timeout."""
+        elapsed_time = time.time() - request.start_time
+        if elapsed_time > REQUEST_TIMEOUT:
+            response.status_code = 408
+            response.data = json.dumps({"error": "Request timed out"})
+            response.headers['Content-Type'] = 'application/json'
+        return response
 
     @app.route('/status', methods=['GET'])
     def status():
@@ -90,7 +105,7 @@ def register_routes(app):
             db.session.commit()
             return jsonify({"message": "Correct! You've guessed the number!", "attempts": player_score.attempts}), 200
 
-    @app.route('/status/<game_id>', methods=['GET'])
+    @app.route('/game/status/<game_id>', methods=['GET'])
     def get_game_status(game_id):
         game = Game.query.get(game_id)
         if not game:
