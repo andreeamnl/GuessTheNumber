@@ -11,7 +11,7 @@ USER_SERVICE_URL = "http://accounts_service:5001"  # Updated to point to account
 
 import time
 
-REQUEST_TIMEOUT = 0.0001
+REQUEST_TIMEOUT = 10
 
 
 
