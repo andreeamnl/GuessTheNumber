@@ -1,96 +1,100 @@
-const redis = require('redis');
 const express = require('express');
+const axios = require('axios');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 5004;
 
-const rateLimit = require('express-rate-limit');
-
-
-
 const limiter = rateLimit({
-    windowMs: 5 * 1000, // 1 second
-    max: 2,
+    windowMs: 5 * 1000, // 5 seconds
+    max: 2, // Maximum 2 requests per window
     message: 'Too many requests!',
 });
-
-
 app.use(limiter);
 
+const ACCOUNTS_SERVICE_URL = process.env.ACCOUNTS_SERVICE_URL || 'http://accounts_service:5001';
+const GAME_SERVICE_URL = process.env.GAME_SERVICE_URL || 'http://game_service:5002';
 
-const redisClient = redis.createClient({
-    url: 'redis://redis:6379',
-});
-
-redisClient.connect().catch((err) => {
-    console.error("Redis connection error:", err);
-});
-
-const cacheMiddleware = async (req, res, next) => {
-    if (req.method !== 'GET') {
-        return next();
-    }
-
-    const cacheKey = req.originalUrl;
-    console.log(`Checking cache for: ${cacheKey}`);
+app.post('/accounts/sign-up', async (req, res) => {
     try {
-        const cachedData = await redisClient.get(cacheKey);
-
-        if (cachedData) {
-            console.log('Serving from cache for:', cacheKey);
-            return res.status(200).json(JSON.parse(cachedData));
-        } else {
-            console.log('Cache miss for:', cacheKey);
-            next();
-        }
-    } catch (err) {
-        console.error('Redis error:', err);
-        next();
+        const { data } = await axios.post(`${ACCOUNTS_SERVICE_URL}/api/users`, req.body);
+        res.status(201).json(data);
+    } catch (error) {
+        res.status(error.response?.status || 500).json({ msg: error.message });
     }
-};
+});
 
-app.use('/accounts', cacheMiddleware, createProxyMiddleware({
-    target: 'http://accounts_service:5001', // Target service for accounts
+app.post('/accounts/login', async (req, res) => {
+    try {
+        const { data } = await axios.post(`${ACCOUNTS_SERVICE_URL}/api/users/login`, req.body);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(error.response?.status || 500).json({ msg: error.message });
+    }
+});
+
+app.post('/game/start/:user_id', async (req, res) => {
+    try {
+        const { data } = await axios.post(`${GAME_SERVICE_URL}/start-game/${req.params.user_id}`, req.body);
+        res.status(201).json(data);
+    } catch (error) {
+        res.status(error.response?.status || 500).json({ msg: error.message });
+    }
+});
+
+app.post('/game/guess/:game_id', async (req, res) => {
+    try {
+        const { data } = await axios.post(`${GAME_SERVICE_URL}/guess/${req.params.game_id}`, req.body);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(error.response?.status || 500).json({ msg: error.message });
+    }
+});
+
+// Route for getting the game status (Game Service)
+app.get('/game/status/:game_id', async (req, res) => {
+    try {
+        const { data } = await axios.get(`${GAME_SERVICE_URL}/game/status/${req.params.game_id}`);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(error.response?.status || 500).json({ msg: error.message });
+    }
+});
+
+app.use('/accounts', createProxyMiddleware({
+    target: ACCOUNTS_SERVICE_URL,
     changeOrigin: true,
-    onProxyRes: async (proxyRes, req, res) => {
-        const body = await streamToString(proxyRes);
-        const cacheKey = req.originalUrl;
-        await redisClient.setEx(cacheKey, 300, body); // Cache for 5 minutes
-    },
 }));
 
-// Proxy middleware for game_service
-app.use('/game', cacheMiddleware, createProxyMiddleware({
-    target: 'http://game_service:5002', // Target service for game
+app.use('/game', createProxyMiddleware({
+    target: GAME_SERVICE_URL,
     changeOrigin: true,
-    onProxyRes: async (proxyRes, req, res) => {
-        const body = await streamToString(proxyRes);
-        const cacheKey = req.originalUrl;
-        await redisClient.setEx(cacheKey, 300, body); // Cache for 5 minutes
-    },
 }));
 
-// Health check endpoint
+app.get('/service-status', async (req, res) => {
+    try {
+        const accountsStatus = await axios.get(`${ACCOUNTS_SERVICE_URL}/status`);
+        
+        const gameStatus = await axios.get(`${GAME_SERVICE_URL}/status`);
+        
+        res.status(200).json({
+            accounts_service: accountsStatus.data,
+            game_service: gameStatus.data
+        });
+    } catch (error) {
+        res.status(500).json({
+            msg: 'Error fetching status from one or more services.',
+            details: error.message
+        });
+    }
+});
+
 app.get('/status', (req, res) => {
     res.json({ status: 'Gateway is up and running!' });
 });
 
-const streamToString = (stream) => {
-    return new Promise((resolve, reject) => {
-        const chunks = [];
-        stream.on('data', chunk => {
-            chunks.push(Buffer.from(chunk));
-        });
-        stream.on('error', reject);
-        stream.on('end', () => {
-            resolve(Buffer.concat(chunks).toString('utf8'));
-        });
-    });
-};
-
-//  start gateway
 app.listen(PORT, () => {
     console.log(`Gateway listening on port ${PORT}`);
 });

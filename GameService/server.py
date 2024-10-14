@@ -34,9 +34,7 @@ def register_routes(app):
     @app.route('/status', methods=['GET'])
     def status():
         return jsonify({
-            "status": "Service is running",
-            "service": "Guess The Number Game Service",
-            "version": "1.0.0"
+            "status": "Game service is running"
         }), 200
 
     @app.route('/start-game/<user_id>', methods=['POST'])
@@ -120,3 +118,5 @@ def register_routes(app):
             "status": game.status,
             "players_scores": scores
         }), 200
+    
+   
