@@ -63,6 +63,7 @@ app.get('/game/status/:game_id', async (req, res) => {
     }
 });
 
+// Proxy middleware for accounts and game services
 app.use('/accounts', createProxyMiddleware({
     target: ACCOUNTS_SERVICE_URL,
     changeOrigin: true,
@@ -76,9 +77,8 @@ app.use('/game', createProxyMiddleware({
 app.get('/service-status', async (req, res) => {
     try {
         const accountsStatus = await axios.get(`${ACCOUNTS_SERVICE_URL}/status`);
-        
         const gameStatus = await axios.get(`${GAME_SERVICE_URL}/status`);
-        
+
         res.status(200).json({
             accounts_service: accountsStatus.data,
             game_service: gameStatus.data
@@ -95,6 +95,7 @@ app.get('/status', (req, res) => {
     res.json({ status: 'Gateway is up and running!' });
 });
 
+// Start the server
 app.listen(PORT, () => {
     console.log(`Gateway listening on port ${PORT}`);
 });

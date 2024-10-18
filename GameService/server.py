@@ -7,6 +7,8 @@ from models.game import Game  # Import your updated models
 from models.playerscore import PlayerScore  # Import your updated models
 import json
 
+
+
 USER_SERVICE_URL = "http://accounts_service:5001"  # Updated to point to accounts_service
 
 import time
@@ -118,5 +120,6 @@ def register_routes(app):
             "status": game.status,
             "players_scores": scores
         }), 200
+    
     
    
