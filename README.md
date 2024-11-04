@@ -212,7 +212,7 @@ Both Service A and Service B share a cache to quickly access player stats and ro
 
 ### Improved Architecture Diagram
 
-![Improved Diagram](Diagrams/PAD2.png)
+![Improved Diagram](Diagrams/PAD2.drawio.png)
 
 ## Improvements Explained
 
