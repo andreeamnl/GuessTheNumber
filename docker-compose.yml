@@ -42,3 +42,12 @@ services:
       - redis
     environment:
       - NODE_ENV=development
+
+  discovery:
+    build:
+      context: ./DiscoveryService
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005

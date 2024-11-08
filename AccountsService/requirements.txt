@@ -2,4 +2,5 @@ Flask
 Flask-CORS
 Flask-SQLAlchemy
 redis
+requests
 flask-socketio

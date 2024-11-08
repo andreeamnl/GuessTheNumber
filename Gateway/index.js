@@ -14,11 +14,23 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-const ACCOUNTS_SERVICE_URL = process.env.ACCOUNTS_SERVICE_URL || 'http://accounts_service:5001';
-const GAME_SERVICE_URL = process.env.GAME_SERVICE_URL || 'http://game_service:5002';
+const getServiceURL = async (serviceName) => {
+    try {
+        const response = await axios.get(`http://discovery:3005/service/${serviceName}`); 
+        if (response.data && response.data.length > 0) {
+            const { address, port } = response.data[0]; 
+            return `http://${address}:${port}`;
+        } else {
+            throw new Error(`Service ${serviceName} not found`);
+        }
+    } catch (error) {
+        throw new Error(`Error fetching service details for ${serviceName}: ${error.message}`);
+    }
+};
 
 app.post('/accounts/sign-up', async (req, res) => {
     try {
+        const ACCOUNTS_SERVICE_URL = await getServiceURL('accounts'); 
         const { data } = await axios.post(`${ACCOUNTS_SERVICE_URL}/api/users`, req.body);
         res.status(201).json(data);
     } catch (error) {
@@ -28,6 +40,7 @@ app.post('/accounts/sign-up', async (req, res) => {
 
 app.post('/accounts/login', async (req, res) => {
     try {
+        const ACCOUNTS_SERVICE_URL = await getServiceURL('accounts');
         const { data } = await axios.post(`${ACCOUNTS_SERVICE_URL}/api/users/login`, req.body);
         res.status(200).json(data);
     } catch (error) {
@@ -37,6 +50,7 @@ app.post('/accounts/login', async (req, res) => {
 
 app.post('/game/start/:user_id', async (req, res) => {
     try {
+        const GAME_SERVICE_URL = await getServiceURL('game');
         const { data } = await axios.post(`${GAME_SERVICE_URL}/start-game/${req.params.user_id}`, req.body);
         res.status(201).json(data);
     } catch (error) {
@@ -46,6 +60,7 @@ app.post('/game/start/:user_id', async (req, res) => {
 
 app.post('/game/guess/:game_id', async (req, res) => {
     try {
+        const GAME_SERVICE_URL = await getServiceURL('game');
         const { data } = await axios.post(`${GAME_SERVICE_URL}/guess/${req.params.game_id}`, req.body);
         res.status(200).json(data);
     } catch (error) {
@@ -53,9 +68,9 @@ app.post('/game/guess/:game_id', async (req, res) => {
     }
 });
 
-// Route for getting the game status (Game Service)
 app.get('/game/status/:game_id', async (req, res) => {
     try {
+        const GAME_SERVICE_URL = await getServiceURL('game');
         const { data } = await axios.get(`${GAME_SERVICE_URL}/game/status/${req.params.game_id}`);
         res.status(200).json(data);
     } catch (error) {
@@ -63,21 +78,10 @@ app.get('/game/status/:game_id', async (req, res) => {
     }
 });
 
-// Proxy middleware for accounts and game services
-app.use('/accounts', createProxyMiddleware({
-    target: ACCOUNTS_SERVICE_URL,
-    changeOrigin: true,
-}));
-
-app.use('/game', createProxyMiddleware({
-    target: GAME_SERVICE_URL,
-    changeOrigin: true,
-}));
-
 app.get('/service-status', async (req, res) => {
     try {
-        const accountsStatus = await axios.get(`${ACCOUNTS_SERVICE_URL}/status`);
-        const gameStatus = await axios.get(`${GAME_SERVICE_URL}/status`);
+        const accountsStatus = await axios.get(`${await getServiceURL('accounts')}/status`);
+        const gameStatus = await axios.get(`${await getServiceURL('game')}/status`);
 
         res.status(200).json({
             accounts_service: accountsStatus.data,
@@ -95,7 +99,6 @@ app.get('/status', (req, res) => {
     res.json({ status: 'Gateway is up and running!' });
 });
 
-// Start the server
 app.listen(PORT, () => {
     console.log(`Gateway listening on port ${PORT}`);
 });
