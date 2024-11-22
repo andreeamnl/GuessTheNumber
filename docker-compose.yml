@@ -1,48 +1,4 @@
 services:
-  accounts_service:
-    build:
-      context: ./AccountsService
-      dockerfile: Dockerfile
-    ports:
-      - "5001:5001"
-    depends_on:
-      - redis
-    environment:
-      - FLASK_ENV=development
-    volumes:
-      - ./AccountsService/instance:/app/instance
-
-  game_service:
-    build:
-      context: ./GameService
-      dockerfile: Dockerfile
-    ports:
-      - "5002:5002"
-    depends_on:
-      - accounts_service
-    environment:
-      - FLASK_ENV=development
-    volumes:
-      - ./GameService/instance:/app/instance
-
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
-
-  gateway:
-    build:
-      context: ./Gateway
-      dockerfile: Dockerfile
-    ports:
-      - "5004:5004"
-    depends_on:
-      - accounts_service
-      - game_service
-      - redis
-    environment:
-      - NODE_ENV=development
-
   discovery:
     build:
       context: ./DiscoveryService
@@ -51,3 +7,187 @@ services:
       - "3005:3005"
     environment:
       - PORT=3005
+    volumes:
+      - ./DiscoveryService:/app
+    networks:
+      - guessthenumber_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml # Mount Prometheus config
+    ports:
+      - "9090:9090" # Prometheus UI accessible at localhost:9090
+    networks:
+      - guessthenumber_network
+
+  # grafana:
+  #   image: grafana/grafana
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - prometheus
+
+  gateway:
+    build:
+      context: ./Gateway
+      dockerfile: Dockerfile
+    ports:
+      - "5004:5004"
+    depends_on:
+      - discovery
+      - accounts_service_1
+      - game_service_1
+    environment:
+      - NODE_ENV=development
+      - DISCOVERY_HOST=http://discovery:3005
+    volumes:
+      - ./Gateway:/app
+    networks:
+      - guessthenumber_network
+
+  accounts_service_1:
+    build:
+      context: ./AccountsService
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    depends_on:
+      discovery:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      - FLASK_ENV=development
+      - SERVICE_NAME=accounts_service_1
+      - DISCOVERY_HOST=http://discovery:3005
+      - REPLICA_ID=1
+      - SERVICE_PORT=5001
+    volumes:
+      - ./AccountsService/instance:/app/instance
+    networks:
+      - guessthenumber_network
+
+  accounts_service_2:
+    build:
+      context: ./AccountsService
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5001"
+    depends_on:
+      discovery:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      - FLASK_ENV=development
+      - SERVICE_NAME=accounts_service_2
+      - DISCOVERY_HOST=http://discovery:3005
+      - REPLICA_ID=2
+      - SERVICE_PORT=5001
+    volumes:
+      - ./AccountsService/instance:/app/instance
+    networks:
+      - guessthenumber_network
+
+  accounts_service_3:
+    build:
+      context: ./AccountsService
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5001"
+    depends_on:
+      discovery:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      - FLASK_ENV=development
+      - SERVICE_NAME=accounts_service_3
+      - DISCOVERY_HOST=http://discovery:3005
+      - REPLICA_ID=3
+      - SERVICE_PORT=5001
+    volumes:
+      - ./AccountsService/instance:/app/instance
+    networks:
+      - guessthenumber_network
+
+  game_service_1:
+    build:
+      context: ./GameService
+      dockerfile: Dockerfile
+    ports:
+      - "5006:5002"
+    depends_on:
+      - accounts_service_1
+      - discovery
+    environment:
+      - FLASK_ENV=development
+      - SERVICE_NAME=game_service_1
+      - DISCOVERY_HOST=http://discovery:3005
+      - REPLICA_ID=1
+      - SERVICE_PORT=5002
+    volumes:
+      - ./GameService/instance:/app/instance
+    networks:
+      - guessthenumber_network
+
+  game_service_2:
+    build:
+      context: ./GameService
+      dockerfile: Dockerfile
+    ports:
+      - "5007:5002"
+    depends_on:
+      - accounts_service_2
+      - discovery
+    environment:
+      - FLASK_ENV=development
+      - SERVICE_NAME=game_service_2
+      - DISCOVERY_HOST=http://discovery:3005
+      - REPLICA_ID=2
+      - SERVICE_PORT=5002
+    volumes:
+      - ./GameService/instance:/app/instance
+    networks:
+      - guessthenumber_network
+
+  game_service_3:
+    build:
+      context: ./GameService
+      dockerfile: Dockerfile
+    ports:
+      - "5008:5002"
+    depends_on:
+      - accounts_service_3
+      - discovery
+    environment:
+      - FLASK_ENV=development
+      - SERVICE_NAME=game_service_3
+      - DISCOVERY_HOST=http://discovery:3005
+      - REPLICA_ID=3
+      - SERVICE_PORT=5002
+    volumes:
+      - ./GameService/instance:/app/instance
+    networks:
+      - guessthenumber_network
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - guessthenumber_network
+
+networks:
+  guessthenumber_network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

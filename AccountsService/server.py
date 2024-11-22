@@ -9,7 +9,7 @@ redis_client = redis.StrictRedis(host='redis', port=6379, db=0, decode_responses
 
 import time
 
-REQUEST_TIMEOUT = 10
+REQUEST_TIMEOUT = 100
 
 
 def register_routes(app):

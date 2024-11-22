@@ -4,3 +4,4 @@ Flask-SQLAlchemy
 redis
 requests
 flask-socketio
+prometheus_client
