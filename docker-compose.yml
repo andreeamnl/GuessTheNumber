@@ -12,10 +12,11 @@ services:
     networks:
       - guessthenumber_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3005/status"]
       interval: 5s
       timeout: 5s
       retries: 3
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -26,12 +27,12 @@ services:
     networks:
       - guessthenumber_network
 
-  # grafana:
-  #   image: grafana/grafana
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - prometheus
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
 
   gateway:
     build:
@@ -41,7 +42,7 @@ services:
       - "5004:5004"
     depends_on:
       - discovery
-      - accounts_service_1
+      # - accounts_service_1
       - game_service_1
     environment:
       - NODE_ENV=development
@@ -51,7 +52,7 @@ services:
     networks:
       - guessthenumber_network
 
-  accounts_service_1:
+  accounts_service_4:
     build:
       context: ./AccountsService
       dockerfile: Dockerfile
@@ -64,7 +65,7 @@ services:
         condition: service_started
     environment:
       - FLASK_ENV=development
-      - SERVICE_NAME=accounts_service_1
+      - SERVICE_NAME=accounts_service_4
       - DISCOVERY_HOST=http://discovery:3005
       - REPLICA_ID=1
       - SERVICE_PORT=5001
@@ -124,7 +125,7 @@ services:
     ports:
       - "5006:5002"
     depends_on:
-      - accounts_service_1
+      # - accounts_service_1
       - discovery
     environment:
       - FLASK_ENV=development
@@ -144,7 +145,7 @@ services:
     ports:
       - "5007:5002"
     depends_on:
-      - accounts_service_2
+      # - accounts_service_2
       - discovery
     environment:
       - FLASK_ENV=development
@@ -164,7 +165,7 @@ services:
     ports:
       - "5008:5002"
     depends_on:
-      - accounts_service_3
+      # - accounts_service_3
       - discovery
     environment:
       - FLASK_ENV=development

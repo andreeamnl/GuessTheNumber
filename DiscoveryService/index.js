@@ -17,12 +17,33 @@ const register = new promClient.Registry();
 // Collect default metrics like memory usage, process uptime, etc.
 promClient.collectDefaultMetrics({ register });
 
-// Example of a custom metric: number of registered services
+// Metric: Number of registered services
 const serviceCount = new promClient.Gauge({
   name: 'service_discovery_service_count',
   help: 'Number of services currently registered in the service discovery',
 });
 register.registerMetric(serviceCount);
+
+// Metric: Total number of health checks performed
+const totalHealthChecks = new promClient.Counter({
+  name: 'service_discovery_health_checks_total',
+  help: 'Total number of health checks performed',
+});
+register.registerMetric(totalHealthChecks);
+
+// Metric: Total successful health checks
+const successfulHealthChecks = new promClient.Counter({
+  name: 'service_discovery_successful_health_checks_total',
+  help: 'Total number of successful health checks performed',
+});
+register.registerMetric(successfulHealthChecks);
+
+// Metric: Total failed health checks
+const failedHealthChecks = new promClient.Counter({
+  name: 'service_discovery_failed_health_checks_total',
+  help: 'Total number of failed health checks performed',
+});
+register.registerMetric(failedHealthChecks);
 
 // Endpoint to register services
 app.post('/register', (req, res) => {
@@ -49,6 +70,75 @@ app.post('/register', (req, res) => {
     } else {
         res.status(409).json({ message: 'Service replica already registered' });
     }
+});
+
+// Function to perform health checks
+async function checkHealth(address, port, retries = 3) {
+    const url = `http://${address}:${port}/status`;
+    let attempt = 0;
+    totalHealthChecks.inc(); // Increment total health checks
+
+    while (attempt < retries) {
+        try {
+            const response = await axios.get(url);
+            if (response.status === 200) {
+                successfulHealthChecks.inc(); // Increment successful health checks
+                return true; // Health check passed
+            } else {
+                throw new Error('Service unhealthy');
+            }
+        } catch (error) {
+            attempt++;
+            if (attempt === retries) {
+                failedHealthChecks.inc(); // Increment failed health checks
+                return false; // After retries, return unhealthy
+            }
+        }
+    }
+    return false;
+}
+
+// Health check for all services in the registry
+setInterval(async () => {
+    for (const [name, instances] of Object.entries(servicesRegistry)) {
+        for (let i = 0; i < instances.length; i++) {
+            const { address, port } = instances[i];
+            try {
+                const isHealthy = await checkHealth(address, port);
+                if (!isHealthy) {
+                    console.log(`Removing unhealthy service: ${name} at ${address}:${port}`);
+                    servicesRegistry[name].splice(i, 1);
+                    i--; // Adjust index after removal
+                }
+            } catch (error) {
+                console.error(`Error checking health of service: ${name} at ${address}:${port}`);
+                servicesRegistry[name].splice(i, 1);
+                i--; // Adjust index after removal
+            }
+        }
+        if (servicesRegistry[name].length === 0) {
+            delete servicesRegistry[name];
+        }
+    }
+}, 25000); // Run every 25 seconds
+
+// Update the service count metric dynamically
+setInterval(() => {
+    const numberOfRegisteredServices = Object.keys(servicesRegistry).reduce(
+        (total, name) => total + servicesRegistry[name].length, 0
+    );
+    serviceCount.set(numberOfRegisteredServices);
+}, 5000); // Update every 5 seconds
+
+// Expose a metrics endpoint for Prometheus
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+});
+
+// Status endpoint for the service discovery
+app.get('/status', (req, res) => {
+    res.status(200).json({ message: 'Service discovery is running' });
 });
 
 // Endpoint to get a service's details by its name
@@ -87,7 +177,6 @@ app.get('/service/:name/address', (req, res) => {
     const serviceDetails = servicesRegistry[name];
 
     if (serviceDetails && serviceDetails.length > 0) {
-        // Assuming you want to return the first instance's address
         res.status(200).json({ address: serviceDetails[0].address });
     } else {
         res.status(404).json({ message: 'Service not found' });
@@ -100,7 +189,6 @@ app.get('/service/:name/port', (req, res) => {
     const serviceDetails = servicesRegistry[name];
 
     if (serviceDetails && serviceDetails.length > 0) {
-        // Assuming you want to return the first instance's port
         res.status(200).json({ port: serviceDetails[0].port });
     } else {
         res.status(404).json({ message: 'Service not found' });
@@ -118,75 +206,6 @@ app.get('/services', (req, res) => {
         message: 'Registered services retrieved successfully',
         services: allServices
     });
-});
-
-// Function to attempt health check with retry logic
-async function checkHealth(address, port, retries = 3) {
-    const url = `http://${address}:${port}/status`;
-    let attempt = 0;
-
-    while (attempt < retries) {
-        try {
-            const response = await axios.get(url);
-            if (response.status === 200) {
-                return true; // Health check passed
-            } else {
-                throw new Error('Service unhealthy');
-            }
-        } catch (error) {
-            console.error(`Attempt ${attempt + 1} failed: ${error.message}`);
-            attempt++;
-            if (attempt === retries) {
-                return false; // After retries, return unhealthy
-            }
-        }
-    }
-    return false;
-}
-
-// Health check for all services in the registry
-setInterval(async () => {
-    for (const [name, instances] of Object.entries(servicesRegistry)) {
-        for (let i = 0; i < instances.length; i++) {
-            const { address, port } = instances[i];
-            try {
-                const isHealthy = await checkHealth(address, port);
-                if (!isHealthy) {
-                    console.log(`Removing unhealthy service: ${name} at ${address}:${port}`);
-                    servicesRegistry[name].splice(i, 1);
-                    i--; // Adjust index after removal
-                }
-            } catch (error) {
-                console.error(`Error checking health of service: ${name} at ${address}:${port}`);
-                console.error(`Error message: ${error.message}`);
-                console.error(`Stack trace: ${error.stack}`);
-                servicesRegistry[name].splice(i, 1);
-                i--; // Adjust index after removal
-            }
-        }
-        if (servicesRegistry[name].length === 0) {
-            delete servicesRegistry[name];
-        }
-    }
-}, 25000); // Run every 25 seconds
-
-// Update the service count metric dynamically
-setInterval(() => {
-    const numberOfRegisteredServices = Object.keys(servicesRegistry).reduce(
-        (total, name) => total + servicesRegistry[name].length, 0
-    );
-    serviceCount.set(numberOfRegisteredServices);
-}, 5000); // Update every 5 seconds
-
-// Expose a metrics endpoint for Prometheus
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
-
-// Status endpoint for the service discovery
-app.get('/status', (req, res) => {
-    res.status(200).json({ message: 'Service discovery is running' });
 });
 
 app.listen(PORT, () => {

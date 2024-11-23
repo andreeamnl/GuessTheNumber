@@ -19,17 +19,11 @@ const getServiceURLs = async (serviceNameBase, maxIndex = 3) => {
     for (let i = 1; i <= maxIndex; i++) {
         const serviceName = `${serviceNameBase}${i}`;
         try {
-            // Get the service address
             const addressResponse = await axios.get(`http://discovery:3005/service/${serviceName}/address`);
-            // Get the service port
             const portResponse = await axios.get(`http://discovery:3005/service/${serviceName}/port`);
-
-            // Check if address and port are retrieved correctly
             if (addressResponse.data && portResponse.data) {
                 const address = addressResponse.data.address;
                 const port = portResponse.data.port;
-
-                // Push the full URL of the service instance
                 serviceURLs.push(`http://${address}:${port}`);
             } else {
                 console.warn(`Service ${serviceName} does not have a valid address or port`);
@@ -39,54 +33,51 @@ const getServiceURLs = async (serviceNameBase, maxIndex = 3) => {
         }
     }
 
-    // If no valid service URLs were found, throw an error
-    if (serviceURLs.length === 0) {
-        throw new Error(`No reachable instances found for service base ${serviceNameBase}`);
-    }
-
     return serviceURLs;
 };
 
-// Retry mechanism for service calls, iterating through service indices on failure
 const tryServiceCall = async (serviceNameBase, url, method, data, retriesPerInstance = 3, timeout = 5000, maxIndex = 3) => {
-    for (let i = 1; i <= maxIndex; i++) {
-        const serviceName = `${serviceNameBase}${i}`;
-        try {
-            // Fetch URLs for the current service index
-            const serviceURLs = await getServiceURLs(serviceNameBase, maxIndex);
+    const serviceURLs = await getServiceURLs(serviceNameBase, maxIndex);
 
-            for (let retry = 0; retry < retriesPerInstance; retry++) {
-                for (const serviceURL of serviceURLs) {
-                    try {
-                        console.log(`Trying service instance: ${serviceURL}`);
-                        const response = await axios({
-                            method,
-                            url: `${serviceURL}${url}`,
-                            data,
-                            timeout,
-                        });
-                        return response.data; // Return if successful
-                    } catch (error) {
-                        console.error(`Error with ${serviceURL}: ${error.message}`);
-                    }
-                }
+    if (serviceURLs.length === 0) {
+        console.error(`No reachable instances for service: ${serviceNameBase}`);
+        return { success: false, error: `No reachable instances for ${serviceNameBase}` };
+    }
+
+    let totalRetries = 0; // Counter for total retries
+    for (let retry = 0; retry < retriesPerInstance; retry++) {
+        for (const serviceURL of serviceURLs) {
+            totalRetries++;
+            try {
+                console.log(`Trying service instance: ${serviceURL}, Retry #${totalRetries}`);
+                const response = await axios({
+                    method,
+                    url: `${serviceURL}${url}`,
+                    data,
+                    timeout,
+                });
+                console.log(`Service call succeeded after ${totalRetries} retries.`);
+                return { success: true, data: response.data }; // Return successful response
+            } catch (error) {
+                console.error(`Error with ${serviceURL} (Retry #${totalRetries}): ${error.message}`);
             }
-        } catch (error) {
-            console.error(`All retries failed for service index ${serviceName}: ${error.message}`);
         }
     }
 
-    throw new Error(`All attempts failed for service base ${serviceNameBase}`);
+    console.error(`All attempts failed for service base ${serviceNameBase}.`);
+    return { success: false, error: `All instances of ${serviceNameBase} failed.` };
 };
 
 // Account Sign-up endpoint
 app.post('/accounts/sign-up', async (req, res) => {
     try {
-        const serviceNameBase = 'accounts_service_'; // Base name of the service
-        const data = await tryServiceCall(serviceNameBase, '/api/users', 'POST', req.body); // Make the call
-        res.status(201).json(data); // Send the response back to the client
+        console.log('Request body:', req.body); // Log the request body
+        const serviceNameBase = 'accounts_service_';
+        const data = await tryServiceCall(serviceNameBase, '/api/users', 'POST', req.body);
+        res.status(201).json(data);
     } catch (error) {
-        res.status(500).json({ msg: `All instances of ${serviceNameBase} failed: ${error.message}` });
+        console.error(error); // Log the error for further investigation
+        res.status(500).json({ msg: `All instances of accounts_service_ failed: ${error.message}` });
     }
 });
 

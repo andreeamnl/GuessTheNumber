@@ -1,7 +1,9 @@
 global:
-  scrape_interval: 15s # scrape every 15 seconds
+  scrape_interval: 15s # Scrape every 15 seconds
 
 scrape_configs:
   - job_name: "service_discovery"
     static_configs:
-      - targets: ["discovery:3005"]
+      - targets:
+          - "service_discovery:3005"
+          - "prometheus:9090"
